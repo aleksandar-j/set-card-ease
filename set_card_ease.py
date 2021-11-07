@@ -1,50 +1,67 @@
 # License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
-from aqt import mw
-from aqt.utils import getText
+from aqt.utils import tooltip, showWarning, getText
+from aqt.operations import CollectionOp
 
 import random
 
-def setEaseStatic(card_ids, ease):
-    mw.col.modSchema(check=True)
+def isInteger(str):
+    try:
+        int(str)
+        return True
+    except ValueError:
+        return False
+def isIntegerPair(str):
+    try:
+        pair = str.split(',')
+        if len(pair) != 2:
+            raise ValueError
+        int(pair[0])
+        int(pair[1])
+        return True
+    except ValueError:
+        return False
+def getIntegerPair(str):
+    pair = str.split(',')
+    return int(pair[0]), int(pair[1])
 
-    for card_id in card_ids:
-        new_ease = int(ease) * 10
-        mw.col.db.execute("UPDATE cards SET factor=? WHERE id=?", new_ease, card_id)
-        
-    mw.reset()
+def setEaseStatic(col, card_ids, ease):
+    cards = [col.get_card(card_id) for card_id in card_ids]
 
-def setEaseDynamic(card_ids, add_low, add_high):
-    mw.col.modSchema(check=True)
-
-    for card_id in card_ids:
-        current_ease = mw.col.db.scalar("SELECT factor FROM cards WHERE id=?", card_id)
-        new_ease = int(current_ease) + int(random.randint(add_low, add_high)) * 10
-        mw.col.db.execute("UPDATE cards SET factor=? WHERE id=?", new_ease, card_id)
+    for card in cards:
+        card.factor = int(ease) * 10
     
-    mw.reset()
+    return col.update_cards(cards)
+
+def setEaseDynamic(col, card_ids, add_low, add_high):
+    cards = [col.get_card(card_id) for card_id in card_ids]
+
+    for card in cards:
+        card.factor = int(card.factor) + int(random.randint(add_low, add_high)) * 10
+
+    return col.update_cards(cards)
 
 def setCardEase(browser):
-    if not browser.selectedCards():
+    card_ids = browser.selectedCards()
+    if not card_ids:
         return
 
-    card_ids = browser.selectedCards()
-
-    user_input, succeeded = getText("Enter new card ease factor. Examples of acceptable values are '250' (default starting value), '-10,+25' (adds the random value from the interval [-10, 25] to the current ease factor).", 
+    user_input, succeeded = getText("Enter new card ease factor.\n250 = default starting value\n-10,25 = adds the random value from the interval [-10, 25] to the current ease factor", 
                                     parent=browser, default="250")
     if not succeeded:
         return
 
-    try:
-        ease = int(user_input)
-        setEaseStatic(card_ids, ease)
-    except ValueError:
-        pass
+    if isInteger(user_input):
+        op = CollectionOp(browser, lambda col: setEaseStatic(col, card_ids, int(user_input)))
+        op.success(lambda _: tooltip(f"Set ease factor of {len(card_ids)} cards.", parent=browser))
+        op.run_in_background()
+        return
 
-    try:
-        interval = user_input.split(',')
-        if len(interval) != 2:
-            raise ValueError
-        setEaseDynamic(card_ids, int(interval[0]), int(interval[1]))
-    except ValueError:
-        pass
+    if isIntegerPair(user_input):
+        low, high = getIntegerPair(user_input)
+        op = CollectionOp(browser, lambda col: setEaseDynamic(col, card_ids, low, high))
+        op.success(lambda _: tooltip(f"Set ease factor of {len(card_ids)} cards.", parent=browser))
+        op.run_in_background()
+        return
+
+    showWarning("Invalid input.")
