@@ -1,5 +1,6 @@
 # License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
+from aqt import mw
 from aqt.utils import tooltip, showWarning, getText
 from aqt.operations import CollectionOp
 
@@ -25,6 +26,19 @@ def getIntegerPair(str):
     pair = str.split(',')
     return int(pair[0]), int(pair[1])
 
+def load_config_val(entry, default=''):
+    try:
+        return mw.addonManager.getConfig(__name__)[entry]
+    except:
+        return default
+def write_config_val(entry, value):
+    try:
+        config = mw.addonManager.getConfig(__name__)
+        config[entry] = value
+        mw.addonManager.writeConfig(__name__, config)
+    except:
+        pass
+
 def setEaseStatic(col, card_ids, ease):
     cards = [col.get_card(card_id) for card_id in card_ids]
 
@@ -47,7 +61,7 @@ def setCardEase(browser):
         return
 
     user_input, succeeded = getText("Enter new card ease factor.\n250 = default starting value\n-10,25 = adds the random value from the interval [-10, 25] to the current ease factor", 
-                                    parent=browser, default="250")
+                                    parent=browser, default=load_config_val('default_input', default='250'))
     if not succeeded:
         return
 
@@ -55,6 +69,7 @@ def setCardEase(browser):
         op = CollectionOp(browser, lambda col: setEaseStatic(col, card_ids, int(user_input)))
         op.success(lambda _: tooltip(f"Set ease factor of {len(card_ids)} cards.", parent=browser))
         op.run_in_background()
+        write_config_val('default_input', user_input)
         return
 
     if isIntegerPair(user_input):
@@ -62,6 +77,7 @@ def setCardEase(browser):
         op = CollectionOp(browser, lambda col: setEaseDynamic(col, card_ids, low, high))
         op.success(lambda _: tooltip(f"Set ease factor of {len(card_ids)} cards.", parent=browser))
         op.run_in_background()
+        write_config_val('default_input', user_input)
         return
 
     showWarning("Invalid input.")
