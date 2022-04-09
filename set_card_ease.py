@@ -3,6 +3,7 @@
 from aqt import mw
 from aqt.utils import tooltip, showWarning, getText
 from aqt.operations import CollectionOp
+from anki import version as anki_version
 
 import random
 
@@ -39,33 +40,41 @@ def getNumberPair(str):
     pair = str.split(',')
     return float(pair[0]), float(pair[1])
 
+def update_cards(col, cards):
+    if anki_version == '2.1.45':
+        for card in cards:
+            col.update_card(card)
+        return col.update_note(cards[0].note())
+    else:
+        return col.update_cards(cards)
+
 def setEaseStatic(col, card_ids, ease):
     cards = [col.get_card(card_id) for card_id in card_ids]
     for card in cards:
         card.factor = int(round(ease * 10, -1))
-    return col.update_cards(cards)
+    return update_cards(col, cards)
 
 def setEaseDynamicAdd(col, card_ids, add):
     cards = [col.get_card(card_id) for card_id in card_ids]
     for card in cards:
         card.factor = int(round(card.factor + add * 10, -1))
-    return col.update_cards(cards)
+    return update_cards(col, cards)
 def setEaseDynamicAddRandom(col, card_ids, add_low, add_high):
     cards = [col.get_card(card_id) for card_id in card_ids]
     for card in cards:
         card.factor = int(round(card.factor + random.uniform(add_low, add_high) * 10, -1))
-    return col.update_cards(cards)
+    return update_cards(col, cards)
 
 def setEaseDynamicMultiply(col, card_ids, mult):
     cards = [col.get_card(card_id) for card_id in card_ids]
     for card in cards:
         card.factor = int(round(card.factor * mult, -1))
-    return col.update_cards(cards)
+    return update_cards(col, cards)
 def setEaseDynamicMultiplyRandom(col, card_ids, mult_low, mult_high):
     cards = [col.get_card(card_id) for card_id in card_ids]
     for card in cards:
         card.factor = int(round(card.factor * random.uniform(mult_low, mult_high), -1))
-    return col.update_cards(cards)
+    return update_cards(col, cards)
 
 def configRead(entry, default=''):
     try:
