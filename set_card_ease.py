@@ -57,7 +57,9 @@ def update_cards(col, cards):
     if anki_version == '2.1.45':
         for card in cards:
             col.update_card(card)
-        return col.update_note(cards[0].note())
+        changes = col.update_note(cards[0].note())
+        changes.browser_table = True
+        return changes
     else:
         return col.update_cards(cards)
 
