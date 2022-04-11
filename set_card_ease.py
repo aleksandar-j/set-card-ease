@@ -15,6 +15,19 @@ PROMPT_TEXT = \
 *0.9 = multiplies the current ease factor values by 0.9
 *0.8,1.2 = multiplies the current ease factor with a random value from the interval [0.8, 1.2]"""
 
+def configRead(entry, default=''):
+    try:
+        return mw.addonManager.getConfig(__name__)[entry]
+    except:
+        return default
+def configWrite(entry, value):
+    try:
+        config = mw.addonManager.getConfig(__name__)
+        config[entry] = value
+        mw.addonManager.writeConfig(__name__, config)
+    except:
+        pass
+
 def isNumber(str, strict=False):
     if strict:
         if any([not (x.isnumeric() or x == '.') for x in str]):
@@ -53,7 +66,6 @@ def setEaseStatic(col, card_ids, ease):
     for card in cards:
         card.factor = int(round(ease * 10, -1))
     return update_cards(col, cards)
-
 def setEaseDynamicAdd(col, card_ids, add):
     cards = [col.get_card(card_id) for card_id in card_ids]
     for card in cards:
@@ -64,7 +76,6 @@ def setEaseDynamicAddRandom(col, card_ids, add_low, add_high):
     for card in cards:
         card.factor = int(round(card.factor + random.uniform(add_low, add_high) * 10, -1))
     return update_cards(col, cards)
-
 def setEaseDynamicMultiply(col, card_ids, mult):
     cards = [col.get_card(card_id) for card_id in card_ids]
     for card in cards:
@@ -75,19 +86,6 @@ def setEaseDynamicMultiplyRandom(col, card_ids, mult_low, mult_high):
     for card in cards:
         card.factor = int(round(card.factor * random.uniform(mult_low, mult_high), -1))
     return update_cards(col, cards)
-
-def configRead(entry, default=''):
-    try:
-        return mw.addonManager.getConfig(__name__)[entry]
-    except:
-        return default
-def configWrite(entry, value):
-    try:
-        config = mw.addonManager.getConfig(__name__)
-        config[entry] = value
-        mw.addonManager.writeConfig(__name__, config)
-    except:
-        pass
 
 def startCollectionOp(browser, op, card_id_len):
     op = CollectionOp(browser, op)
