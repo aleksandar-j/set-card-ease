@@ -99,6 +99,10 @@ def setCardEase(browser):
     if not card_ids:
         return
 
+    if any(mw.col.get_card(card_id).factor == 0 for card_id in card_ids):
+        showWarning("New cards detected. You cannot change card ease factor during learning phase.")
+        return
+
     user_input, succeeded = getText(PROMPT_TEXT, parent=browser, default=configRead('default_input', default='250'))
     if not succeeded:
         return
