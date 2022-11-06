@@ -15,6 +15,8 @@ PROMPT_TEXT = \
 *0.9 = multiplies current ease factor values by 0.9
 *0.8,1.2 = multiplies current ease factor values by a random value from the interval [0.8, 1.2]"""
 
+CONFIG_DEFAULT_INPUT_VAR = 'default_input'
+
 def configRead(entry, default=''):
     try:
         return mw.addonManager.getConfig(__name__)[entry]
@@ -103,7 +105,7 @@ def setCardEase(browser):
         showWarning("New cards detected. You cannot change card ease factor during learning phase.")
         return
 
-    user_input, succeeded = getText(PROMPT_TEXT, parent=browser, default=configRead('default_input', default='250'))
+    user_input, succeeded = getText(PROMPT_TEXT, parent=browser, default=configRead(CONFIG_DEFAULT_INPUT_VAR, default='250'))
     if not succeeded:
         return
 
@@ -111,7 +113,7 @@ def setCardEase(browser):
     if isNumber(user_input, strict=True):
         val = getNumber(user_input)
         startCollectionOp(browser, lambda col: setEaseStatic(col, card_ids, val), len(card_ids))
-        configWrite('default_input', user_input)
+        configWrite(CONFIG_DEFAULT_INPUT_VAR, user_input)
         return
 
     # If first character is '*', set either to multiple of current values or multiple in range, depending on remaining input
@@ -119,12 +121,12 @@ def setCardEase(browser):
         if isNumber(user_input[1:]):
             val = getNumber(user_input[1:])
             startCollectionOp(browser, lambda col: setEaseDynamicMultiply(col, card_ids, val), len(card_ids))
-            configWrite('default_input', user_input)
+            configWrite(CONFIG_DEFAULT_INPUT_VAR, user_input)
             return
         elif isNumberPair(user_input[1:]):
             low, high = getNumberPair(user_input[1:])
             startCollectionOp(browser, lambda col: setEaseDynamicMultiplyRandom(col, card_ids, low, high), len(card_ids))
-            configWrite('default_input', user_input)
+            configWrite(CONFIG_DEFAULT_INPUT_VAR, user_input)
             return
 
     # If first character is '+', '-', or the string is a pair, set either to add of current values or random add in range, depending on remaining input
@@ -132,12 +134,12 @@ def setCardEase(browser):
         if isNumber(user_input[1:]):
             val = getNumber(user_input)
             startCollectionOp(browser, lambda col: setEaseDynamicAdd(col, card_ids, val), len(card_ids))
-            configWrite('default_input', user_input)
+            configWrite(CONFIG_DEFAULT_INPUT_VAR, user_input)
             return
         elif isNumberPair(user_input):
             low, high = getNumberPair(user_input)
             startCollectionOp(browser, lambda col: setEaseDynamicAddRandom(col, card_ids, low, high), len(card_ids))
-            configWrite('default_input', user_input)
+            configWrite(CONFIG_DEFAULT_INPUT_VAR, user_input)
             return
 
     showWarning("Invalid input.")
