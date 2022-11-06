@@ -30,7 +30,7 @@ def configWrite(entry, value):
 
 def isNumber(str, strict=False):
     if strict:
-        if any([not (x.isnumeric() or x == '.') for x in str]):
+        if any(not (x.isnumeric() or x == '.') for x in str):
             return False
     try:
         float(str)
