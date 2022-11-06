@@ -9,11 +9,11 @@ import random
 
 PROMPT_TEXT = \
 """Enter new card ease factor.
-250 = sets ease factor to the default starting value
-+120 = adds 120 to the current ease factor values
--10,25 = adds a random value from the interval [-10, 25] to the current ease factor
-*0.9 = multiplies the current ease factor values by 0.9
-*0.8,1.2 = multiplies the current ease factor with a random value from the interval [0.8, 1.2]"""
+250 = sets ease factors to default starting value
++120 = adds 120 to current ease factor values
+-10,25 = adds a random value from the interval [-10, 25] to current ease factor values
+*0.9 = multiplies current ease factor values by 0.9
+*0.8,1.2 = multiplies current ease factor values by a random value from the interval [0.8, 1.2]"""
 
 def configRead(entry, default=''):
     try:
