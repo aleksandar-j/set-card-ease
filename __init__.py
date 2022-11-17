@@ -28,4 +28,13 @@ def setupBrowserAction(browser):
     insert_action_at = browser.form.menu_Cards.actions()[set_due_date_index]
     browser.form.menu_Cards.insertAction(insert_action_at, actionSetCardEase)
 
+def setupReviewerAction(reviewer, menu):
+    actionLambda = lambda: set_card_ease.setCardEase([reviewer.card.id], reviewer.web, reviewer)
+    actionSetCardEase = createAction(actionLambda, reviewer.web)
+    
+    set_due_date_index = getActionIndex(menu, SET_DUE_DATE_TEXT, default=3)
+    insert_action_at = menu.actions()[set_due_date_index]
+    menu.insertAction(insert_action_at, actionSetCardEase)
+
 gui_hooks.browser_menus_did_init.append(setupBrowserAction)
+gui_hooks.reviewer_will_show_context_menu.append(setupReviewerAction)
