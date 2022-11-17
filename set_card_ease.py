@@ -30,116 +30,111 @@ def configWrite(entry, value):
     except:
         pass
 
-def isNumber(str, strict=False):
-    if strict:
+def isNumber(str, strict_numeric=False, strict_positive=False):
+    if strict_numeric:
         if any(not (x.isnumeric() or x == '.') for x in str):
             return False
     try:
-        float(str)
+        f = float(str)
     except ValueError:
         return False
+    if strict_positive:
+        if f <= 0:
+            return False
     return True
 def getNumber(str):
     return float(str)
-def isNumberPair(str):
+def isNumberPair(str, strict_growing=True, strict_positive=False):
     pair = str.split(',')
     if len(pair) != 2:
         return False
     try:
-        float(pair[0])
-        float(pair[1])
+        f1, f2 = float(pair[0]), float(pair[1])
     except ValueError:
         return False
+    if strict_growing:
+        if not f1 < f2:
+            return False
+    if strict_positive:
+        if f1 <= 0 or f2 <= 0:
+            return False
     return True
 def getNumberPair(str):
     pair = str.split(',')
     return float(pair[0]), float(pair[1])
 
-def update_cards(col, cards):
+def setCardEaseOp(col, id_card, id_factor):
+    for cid in id_card:
+        id_card[cid].factor = round(id_factor[cid])
+
     if anki_version == '2.1.45':
-        for card in cards:
+        for card in id_card.values():
             col.update_card(card)
-        changes = col.update_note(cards[0].note())
+        changes = col.update_note(list(id_card.values())[0].note())
         changes.browser_table = True
-        return changes
     else:
-        return col.update_cards(cards)
+        changes = col.update_cards(list(id_card.values()))
 
-def setEaseStatic(col, card_ids, ease):
-    cards = [col.get_card(card_id) for card_id in card_ids]
-    for card in cards:
-        card.factor = int(round(ease * 10, -1))
-    return update_cards(col, cards)
-def setEaseDynamicAdd(col, card_ids, add):
-    cards = [col.get_card(card_id) for card_id in card_ids]
-    for card in cards:
-        card.factor = int(round(card.factor + add * 10, -1))
-    return update_cards(col, cards)
-def setEaseDynamicAddRandom(col, card_ids, add_low, add_high):
-    cards = [col.get_card(card_id) for card_id in card_ids]
-    for card in cards:
-        card.factor = int(round(card.factor + random.uniform(add_low, add_high) * 10, -1))
-    return update_cards(col, cards)
-def setEaseDynamicMultiply(col, card_ids, mult):
-    cards = [col.get_card(card_id) for card_id in card_ids]
-    for card in cards:
-        card.factor = int(round(card.factor * mult, -1))
-    return update_cards(col, cards)
-def setEaseDynamicMultiplyRandom(col, card_ids, mult_low, mult_high):
-    cards = [col.get_card(card_id) for card_id in card_ids]
-    for card in cards:
-        card.factor = int(round(card.factor * random.uniform(mult_low, mult_high), -1))
-    return update_cards(col, cards)
+    return changes
 
-def startCollectionOp(browser, op, card_id_len):
-    op = CollectionOp(browser, op)
-    op.success(lambda _: tooltip(f"Set ease factor of {card_id_len} cards.", parent=browser))
-    op.run_in_background()
-
-def setCardEase(browser):
-    card_ids = browser.selectedCards()
+def setCardEase(card_ids, parent, initiator):
     if not card_ids:
+        tooltip("No cards selected!")
         return
 
-    if any(mw.col.get_card(card_id).factor == 0 for card_id in card_ids):
+    id_card = {card_id : mw.col.get_card(card_id) for card_id in card_ids}
+    id_factor = {card_id : id_card[card_id].factor for card_id in card_ids}
+
+    if any(factor == 0 for factor in id_factor.values()):
         showWarning("New cards detected. You cannot change card ease factor during learning phase.")
         return
 
-    user_input, succeeded = getText(PROMPT_TEXT, parent=browser, default=configRead(CONFIG_DEFAULT_INPUT_VAR, default='250'))
+    prompt = PROMPT_TEXT
+    if len(id_card) == 1:
+        prompt = f"Current card ease factor value: {int(list(id_factor.values())[0]) // 10}%" + "\n\n" + PROMPT_TEXT
+
+    user_input, succeeded = getText(prompt, parent=parent, default=configRead(CONFIG_DEFAULT_INPUT_VAR, default='250'))
     if not succeeded:
         return
 
     # If user_input is a strictly clean number (no '+', '-', or other characters), set ease to that value
-    if isNumber(user_input, strict=True):
-        val = getNumber(user_input)
-        startCollectionOp(browser, lambda col: setEaseStatic(col, card_ids, val), len(card_ids))
-        configWrite(CONFIG_DEFAULT_INPUT_VAR, user_input)
-        return
-
+    is_number = isNumber(user_input, strict_numeric=True)
     # If first character is '*', set either to multiple of current values or multiple in range, depending on remaining input
-    if user_input[0] in ['*']:
-        if isNumber(user_input[1:]):
-            val = getNumber(user_input[1:])
-            startCollectionOp(browser, lambda col: setEaseDynamicMultiply(col, card_ids, val), len(card_ids))
-            configWrite(CONFIG_DEFAULT_INPUT_VAR, user_input)
-            return
-        elif isNumberPair(user_input[1:]):
-            low, high = getNumberPair(user_input[1:])
-            startCollectionOp(browser, lambda col: setEaseDynamicMultiplyRandom(col, card_ids, low, high), len(card_ids))
-            configWrite(CONFIG_DEFAULT_INPUT_VAR, user_input)
-            return
-
+    is_multiplication_simple = user_input[0] in ['*'] and isNumber(user_input[1:], strict_positive=True)
+    is_multiplication_range = user_input[0] in ['*'] and isNumberPair(user_input[1:], strict_positive=True)    
     # If first character is '+', '-', or the string is a pair, set either to add of current values or random add in range, depending on remaining input
-    if user_input[0] in ['+', '-'] or isNumberPair(user_input):
-        if isNumber(user_input[1:]):
-            val = getNumber(user_input)
-            startCollectionOp(browser, lambda col: setEaseDynamicAdd(col, card_ids, val), len(card_ids))
-            configWrite(CONFIG_DEFAULT_INPUT_VAR, user_input)
-            return
-        elif isNumberPair(user_input):
-            low, high = getNumberPair(user_input)
-            startCollectionOp(browser, lambda col: setEaseDynamicAddRandom(col, card_ids, low, high), len(card_ids))
-            configWrite(CONFIG_DEFAULT_INPUT_VAR, user_input)
-            return
+    is_addition_simple = user_input[0] in ['+', '-'] and isNumber(user_input)
+    is_addition_range = isNumberPair(user_input)
 
-    showWarning("Invalid input.")
+    if is_number:
+        val = getNumber(user_input)
+        id_factor = {cid : val*10 for cid in card_ids}
+    elif is_multiplication_simple:
+        val = getNumber(user_input[1:])
+        id_factor = {cid : id_factor[cid]*val for cid in card_ids}
+    elif is_multiplication_range:
+        low, high = getNumberPair(user_input[1:])
+        id_factor = {cid : id_factor[cid]*random.uniform(low, high) for cid in card_ids}
+    elif is_addition_simple:
+        val = getNumber(user_input)
+        id_factor = {cid : id_factor[cid] + val*10 for cid in card_ids}
+    elif is_addition_range:
+        low, high = getNumberPair(user_input)
+        id_factor = {cid : id_factor[cid] + random.uniform(low, high)*10 for cid in card_ids}
+    else:
+        showWarning("Invalid input.")
+        return
+    
+    # Card factors like '2505' or '250.5%' are annoying, round last digit
+    id_factor = {cid : int(round(id_factor[cid], -1)) for cid in id_factor}
+
+    success_string = f"Set ease factor of {len(id_factor)} cards."
+    if len(id_card) == 1:
+        success_string = f"Set ease factor value to {list(id_factor.values())[0] // 10}%."
+
+    CollectionOp(parent, lambda col: setCardEaseOp(col, id_card, id_factor)) \
+        .success(lambda _: tooltip(success_string, parent=parent)) \
+        .run_in_background(initiator=initiator)
+
+    configWrite(CONFIG_DEFAULT_INPUT_VAR, user_input)
+    

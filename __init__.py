@@ -5,10 +5,27 @@ from aqt.qt import QAction
 
 from . import set_card_ease
 
-def setupAction(browser):
-    actionSetCardEase = QAction("Set Ease Factor...", browser)
-    actionSetCardEase.triggered.connect(lambda: set_card_ease.setCardEase(browser))
+SET_DUE_DATE_TEXT = "Set Due Date..."
+SET_CARD_EASE_TEXT = "Set Ease Factor..."
 
-    browser.form.menu_Cards.insertAction(browser.form.menu_Cards.actions()[2], actionSetCardEase)
+def createAction(action, parent):
+    actionSetCardEase = QAction(SET_CARD_EASE_TEXT, parent)
+    actionSetCardEase.triggered.connect(action)
+    return actionSetCardEase
 
-gui_hooks.browser_menus_did_init.append(setupAction)
+def getActionIndex(menu, text, default=-1):
+    actions_text = [action.text() for action in menu.actions()]
+    try:
+        return actions_text.index(text)
+    except ValueError:
+        return default
+
+def setupBrowserAction(browser):
+    actionLambda = lambda: set_card_ease.setCardEase(browser.selectedCards(), browser, browser)
+    actionSetCardEase = createAction(actionLambda, browser)
+    
+    set_due_date_index = getActionIndex(browser.form.menu_Cards, SET_DUE_DATE_TEXT, default=2)
+    insert_action_at = browser.form.menu_Cards.actions()[set_due_date_index]
+    browser.form.menu_Cards.insertAction(insert_action_at, actionSetCardEase)
+
+gui_hooks.browser_menus_did_init.append(setupBrowserAction)
