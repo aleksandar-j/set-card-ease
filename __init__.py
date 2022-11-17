@@ -28,6 +28,14 @@ def setupBrowserAction(browser):
     insert_action_at = browser.form.menu_Cards.actions()[set_due_date_index]
     browser.form.menu_Cards.insertAction(insert_action_at, actionSetCardEase)
 
+    def setupBrowserActionActivity(browser):
+        set_ease_index = getActionIndex(browser.form.menu_Cards, SET_CARD_EASE_TEXT)
+        if set_ease_index == -1:
+            return
+        browser.form.menu_Cards.actions()[set_ease_index].setEnabled(bool(browser.table.len_selection()))
+    gui_hooks.browser_did_change_row.append(setupBrowserActionActivity)
+
+
 def setupReviewerAction(reviewer, menu):
     actionLambda = lambda: set_card_ease.setCardEase([reviewer.card.id], reviewer.web, reviewer)
     actionSetCardEase = createAction(actionLambda, reviewer.web)
