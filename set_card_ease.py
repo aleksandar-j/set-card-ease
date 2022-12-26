@@ -7,6 +7,8 @@ from anki import version as anki_version
 
 import random
 
+from . import config_manager
+
 PROMPT_TEXT = \
 """Enter new card ease factor.
 250 = sets ease factors to default starting value
@@ -14,21 +16,6 @@ PROMPT_TEXT = \
 -10,25 = adds a random value from the interval [-10, 25] to current ease factor values
 *0.9 = multiplies current ease factor values by 0.9
 *0.8,1.2 = multiplies current ease factor values by a random value from the interval [0.8, 1.2]"""
-
-CONFIG_DEFAULT_INPUT_VAR = 'default_input'
-
-def configRead(entry, default=''):
-    try:
-        return mw.addonManager.getConfig(__name__)[entry]
-    except:
-        return default
-def configWrite(entry, value):
-    try:
-        config = mw.addonManager.getConfig(__name__)
-        config[entry] = value
-        mw.addonManager.writeConfig(__name__, config)
-    except:
-        pass
 
 def isNumber(str, strict_numeric=False, strict_positive=False):
     if strict_numeric:
@@ -93,7 +80,8 @@ def setCardEase(card_ids, parent, initiator):
     if len(id_card) == 1:
         prompt = f"Current card ease factor value: {int(list(id_factor.values())[0]) // 10}%" + "\n\n" + PROMPT_TEXT
 
-    user_input, succeeded = getText(prompt, parent=parent, default=configRead(CONFIG_DEFAULT_INPUT_VAR, default='250'))
+    default_input = config_manager.configRead(config_manager.CONFIG_DEFAULT_INPUT, default='250')
+    user_input, succeeded = getText(prompt, parent=parent, default=default_input)
     if not succeeded:
         return
 
@@ -136,5 +124,5 @@ def setCardEase(card_ids, parent, initiator):
         .success(lambda _: tooltip(success_string, parent=parent)) \
         .run_in_background(initiator=initiator)
 
-    configWrite(CONFIG_DEFAULT_INPUT_VAR, user_input)
+    config_manager.configWrite(config_manager.CONFIG_DEFAULT_INPUT, user_input)
     
